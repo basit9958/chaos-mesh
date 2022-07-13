@@ -2,6 +2,10 @@ package main
 
 import (
 	scheduleactive "github.com/chaos-mesh/chaos-mesh/controllers/schedule/active"
+	schedulecron "github.com/chaos-mesh/chaos-mesh/controllers/schedule/cron"
+	schedulegc "github.com/chaos-mesh/chaos-mesh/controllers/schedule/gc"
+	schedulepause "github.com/chaos-mesh/chaos-mesh/controllers/schedule/pause"
+
 	"github.com/chaos-mesh/chaos-mesh/controllers/schedule/utils"
 	"github.com/chaos-mesh/chaos-mesh/controllers/types"
 	"github.com/chaos-mesh/chaos-mesh/controllers/utils/recorder"
@@ -18,18 +22,16 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-
 	clientactive := scheduleactive.Reconciler{Client: manager.GetClient()}
-	//clientcron := schedulecron.Reconciler{Client: manager.GetClient()}
-	//clientgc := schedulegc.Reconciler{Client: manager.GetClient()}
-	//clientpause := schedulepause.Reconciler{Client: manager.GetClient()}
+	clientcron := schedulecron.Reconciler{Client: manager.GetClient()}
+	clientgc := schedulegc.Reconciler{Client: manager.GetClient()}
+	clientpause := schedulepause.Reconciler{Client: manager.GetClient()}
 
 	ChaosControllerManagerMetricsCollector := metrics.NewChaosControllerManagerMetricsCollector(manager, prometheus.NewRegistry(), logr.Logger{})
 	recorderBuilder := recorder.NewRecorderBuilder(clientactive, logr.Logger{}, runtime.NewScheme(), ChaosControllerManagerMetricsCollector)
 	scheduleactive.Bootstrap(manager, clientactive, logr.Logger{}, scheduleactive.Objs{Objs: []types.Object{}}, runtime.NewScheme(), utils.NewActiveLister(clientactive, logr.Logger{}), recorderBuilder)
-
-	//schedulecron.Bootstrap(manager, clientcron)
-	//schedulegc.Bootstrap(manager, clientgc)
-	//schedulepause.Bootstrap(manager, clientpause)
+	schedulecron.Bootstrap(manager, clientcron, logr.Logger{}, utils.NewActiveLister(clientcron, logr.Logger{}), recorderBuilder)
+	schedulegc.Bootstrap(manager, clientgc, logr.Logger{}, schedulegc.Objs{Objs: []types.Object{}}, runtime.NewScheme(), utils.NewActiveLister(clientgc, logr.Logger{}), recorderBuilder)
+	schedulepause.Bootstrap(manager, clientpause, logr.Logger{}, utils.NewActiveLister(clientpause, logr.Logger{}), recorderBuilder)
 
 }
